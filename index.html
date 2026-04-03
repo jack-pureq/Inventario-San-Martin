@@ -3,94 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Taller Electricidad - Inventario</title>
+    <title>Electro-Taller Pro</title>
     <style>
-        body { font-family: sans-serif; margin: 20px; background: #f4f4f9; }
-        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        h2 { color: #333; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+        :root { --primary: #2563eb; --secondary: #1e293b; --success: #16a34a; --danger: #dc2626; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #f1f5f9; color: #334155; }
+        .container { max-width: 800px; margin: auto; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; }
         
-        /* Estilo para la pantalla principal (Limpia) */
-        .precio-venta { font-weight: bold; color: #2e7d32; font-size: 1.2em; }
+        /* Buscador y Tabla */
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background: #f8fafc; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
         
-        /* Sección de Administración (Ocultable) */
-        #admin-section { margin-top: 30px; border-top: 2px solid #333; padding-top: 20px; }
-        input { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; }
-        button { background: #007bff; color: white; border: none; padding: 10px; cursor: pointer; width: 100%; }
-        button:hover { background: #0056b3; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+        .v12 { background: #dcfce7; color: #166534; }
+        .v24 { background: #fee2e2; color: #991b1b; }
+        .precio-venta { font-weight: bold; color: var(--success); font-size: 1.1em; }
+
+        /* Admin y Botones */
+        .hidden { display: none; }
+        .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn-edit { background: var(--secondary); margin-bottom: 5px; }
+        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); margin-top: 10px; }
     </style>
 </head>
 <body>
 
+<div class="container">
     <div class="card">
-        <h2>Refaccionaria - Precios de Venta</h2>
-        <input type="text" id="buscador" placeholder="Buscar producto..." onkeyup="filtrarProductos()">
-        <table id="tabla-ventas">
+        <h2 style="margin-top:0">⚡ Inventario de Venta</h2>
+        <input type="text" id="busqueda" placeholder="🔍 Buscar repuesto o voltaje..." onkeyup="renderizar()">
+        
+        <table>
             <thead>
                 <tr>
                     <th>Producto</th>
+                    <th>Voltaje</th>
                     <th>Stock</th>
-                    <th>Precio de Venta</th>
+                    <th>Precio</th>
                 </tr>
             </thead>
-            <tbody id="lista-publica">
-                </tbody>
+            <tbody id="tabla-cuerpo"></tbody>
         </table>
+        
+        <button class="btn btn-outline" onclick="toggleAdmin()">⚙️ Panel de Control</button>
     </div>
 
-    <div id="admin-section" class="card">
-        <h3>Panel de Inventario (Edición)</h3>
-        <input type="text" id="nombre" placeholder="Nombre del producto">
-        <input type="number" id="pCompra" placeholder="Precio de Compra">
-        <input type="number" id="margen" placeholder="% Margen de ganancia (ej: 30)">
-        <input type="number" id="cantidad" placeholder="Cantidad en Stock">
-        <button onclick="agregarProducto()">Guardar Producto</button>
+    <div id="admin-panel" class="card hidden">
+        <h3 id="form-title">Añadir / Editar Producto</h3>
+        <input type="hidden" id="edit-index" value="-1">
+        <input type="text" id="nombre" placeholder="Nombre (ej: Alternador Mitsubishi)">
+        
+        <select id="voltaje">
+            <option value="12V">Sistema 12V</option>
+            <option value="24V">Sistema 24V</option>
+        </select>
+
+        <div style="display: flex; gap: 10px;">
+            <input type="number" id="pCompra" placeholder="Costo Compra">
+            <input type="number" id="margen" placeholder="% Ganancia">
+        </div>
+        
+        <input type="number" id="stock" placeholder="Cantidad disponible">
+        
+        <button class="btn" onclick="guardarProducto()">✅ Guardar Cambios</button>
+        <button class="btn btn-outline" style="border-color:var(--danger); color:var(--danger)" onclick="cancelarEdicion()">Cancelar</button>
     </div>
+</div>
 
-    <script>
-        let inventario = JSON.parse(localStorage.getItem('inventario')) || [];
+<script>
+    let inventario = JSON.parse(localStorage.getItem('taller_inv')) || [];
+    const CLAVE_ADMIN = "1234"; // Puedes cambiarla
 
-        function agregarProducto() {
-            const nombre = document.getElementById('nombre').value;
-            const pCompra = parseFloat(document.getElementById('pCompra').value);
-            const margen = parseFloat(document.getElementById('margen').value);
-            const cantidad = parseInt(document.getElementById('cantidad').value);
+    function toggleAdmin() {
+        const pass = prompt("Introduce la clave de acceso:");
+        if (pass === CLAVE_ADMIN) {
+            document.getElementById('admin-panel').classList.toggle('hidden');
+        } else {
+            alert("Clave incorrecta");
+        }
+    }
 
-            // Cálculo automático del precio de venta
-            const pVenta = pCompra + (pCompra * (margen / 100));
+    function guardarProducto() {
+        const idx = document.getElementById('edit-index').value;
+        const prod = {
+            nombre: document.getElementById('nombre').value,
+            voltaje: document.getElementById('voltaje').value,
+            pCompra: parseFloat(document.getElementById('pCompra').value),
+            margen: parseFloat(document.getElementById('margen').value),
+            stock: parseInt(document.getElementById('stock').value),
+            pVenta: 0
+        };
 
-            const nuevoProducto = { nombre, pCompra, margen, pVenta, cantidad };
-            inventario.push(nuevoProducto);
-            
-            localStorage.setItem('inventario', JSON.stringify(inventario));
-            renderizar();
-            limpiarFormulario();
+        prod.pVenta = prod.pCompra + (prod.pCompra * (prod.margen / 100));
+
+        if (idx === "-1") {
+            inventario.push(prod);
+        } else {
+            inventario[idx] = prod;
         }
 
-        function renderizar() {
-            const lista = document.getElementById('lista-publica');
-            lista.innerHTML = '';
-            inventario.forEach(prod => {
-                lista.innerHTML += `
+        localStorage.setItem('taller_inv', JSON.stringify(inventario));
+        renderizar();
+        cancelarEdicion();
+    }
+
+    function editar(index) {
+        const p = inventario[index];
+        document.getElementById('edit-index').value = index;
+        document.getElementById('nombre').value = p.nombre;
+        document.getElementById('voltaje').value = p.voltaje;
+        document.getElementById('pCompra').value = p.pCompra;
+        document.getElementById('margen').value = p.margen;
+        document.getElementById('stock').value = p.stock;
+        document.getElementById('form-title').innerText = "Editando: " + p.nombre;
+        document.getElementById('admin-panel').classList.remove('hidden');
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function cancelarEdicion() {
+        document.getElementById('edit-index').value = "-1";
+        document.getElementById('form-title').innerText = "Añadir / Editar Producto";
+        document.querySelectorAll('#admin-panel input').forEach(i => i.value = '');
+        document.getElementById('admin-panel').classList.add('hidden');
+    }
+
+    function renderizar() {
+        const filtro = document.getElementById('busqueda').value.toLowerCase();
+        const cuerpo = document.getElementById('tabla-cuerpo');
+        cuerpo.innerHTML = '';
+
+        inventario.forEach((p, index) => {
+            if (p.nombre.toLowerCase().includes(filtro) || p.voltaje.toLowerCase().includes(filtro)) {
+                const badgeClass = p.voltaje === '12V' ? 'v12' : 'v24';
+                cuerpo.innerHTML += `
                     <tr>
-                        <td>${prod.nombre}</td>
-                        <td>${prod.cantidad}</td>
-                        <td class="precio-venta">S/ ${prod.pVenta.toFixed(2)}</td>
+                        <td>
+                            ${p.nombre}<br>
+                            <button class="btn btn-edit" style="width:auto; padding:4px 8px; font-size:10px;" onclick="editar(${index})">Editar</button>
+                        </td>
+                        <td><span class="badge ${badgeClass}">${p.voltaje}</span></td>
+                        <td>${p.stock}</td>
+                        <td class="precio-venta">S/ ${p.pVenta.toFixed(2)}</td>
                     </tr>
                 `;
-            });
-        }
+            }
+        });
+    }
 
-        function limpiarFormulario() {
-            document.getElementById('nombre').value = '';
-            document.getElementById('pCompra').value = '';
-            document.getElementById('margen').value = '';
-            document.getElementById('cantidad').value = '';
-        }
-
-        // Cargar datos al iniciar
-        renderizar();
-    </script>
+    renderizar();
+</script>
 </body>
 </html>
