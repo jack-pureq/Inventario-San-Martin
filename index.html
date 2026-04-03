@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taller Electricidad - Inventario</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background: #f4f4f9; }
+        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h2 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+        
+        /* Estilo para la pantalla principal (Limpia) */
+        .precio-venta { font-weight: bold; color: #2e7d32; font-size: 1.2em; }
+        
+        /* Sección de Administración (Ocultable) */
+        #admin-section { margin-top: 30px; border-top: 2px solid #333; padding-top: 20px; }
+        input { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; padding: 10px; cursor: pointer; width: 100%; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Refaccionaria - Precios de Venta</h2>
+        <input type="text" id="buscador" placeholder="Buscar producto..." onkeyup="filtrarProductos()">
+        <table id="tabla-ventas">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Stock</th>
+                    <th>Precio de Venta</th>
+                </tr>
+            </thead>
+            <tbody id="lista-publica">
+                </tbody>
+        </table>
+    </div>
+
+    <div id="admin-section" class="card">
+        <h3>Panel de Inventario (Edición)</h3>
+        <input type="text" id="nombre" placeholder="Nombre del producto">
+        <input type="number" id="pCompra" placeholder="Precio de Compra">
+        <input type="number" id="margen" placeholder="% Margen de ganancia (ej: 30)">
+        <input type="number" id="cantidad" placeholder="Cantidad en Stock">
+        <button onclick="agregarProducto()">Guardar Producto</button>
+    </div>
+
+    <script>
+        let inventario = JSON.parse(localStorage.getItem('inventario')) || [];
+
+        function agregarProducto() {
+            const nombre = document.getElementById('nombre').value;
+            const pCompra = parseFloat(document.getElementById('pCompra').value);
+            const margen = parseFloat(document.getElementById('margen').value);
+            const cantidad = parseInt(document.getElementById('cantidad').value);
+
+            // Cálculo automático del precio de venta
+            const pVenta = pCompra + (pCompra * (margen / 100));
+
+            const nuevoProducto = { nombre, pCompra, margen, pVenta, cantidad };
+            inventario.push(nuevoProducto);
+            
+            localStorage.setItem('inventario', JSON.stringify(inventario));
+            renderizar();
+            limpiarFormulario();
+        }
+
+        function renderizar() {
+            const lista = document.getElementById('lista-publica');
+            lista.innerHTML = '';
+            inventario.forEach(prod => {
+                lista.innerHTML += `
+                    <tr>
+                        <td>${prod.nombre}</td>
+                        <td>${prod.cantidad}</td>
+                        <td class="precio-venta">S/ ${prod.pVenta.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function limpiarFormulario() {
+            document.getElementById('nombre').value = '';
+            document.getElementById('pCompra').value = '';
+            document.getElementById('margen').value = '';
+            document.getElementById('cantidad').value = '';
+        }
+
+        // Cargar datos al iniciar
+        renderizar();
+    </script>
+</body>
+</html>
