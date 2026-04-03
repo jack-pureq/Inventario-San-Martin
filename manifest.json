@@ -1,0 +1,15 @@
+{
+  "name": "ElectroTaller Inventario",
+  "short_name": "TallerApp",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2906/2906254.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
