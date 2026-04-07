@@ -3,160 +3,241 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Electro-Taller Pro</title>
+    <title>Electro-Taller POS</title>
     <link rel="manifest" href="manifest.json">
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js');
-  }
-</script>
-    
     <style>
-        :root { --primary: #2563eb; --secondary: #1e293b; --success: #16a34a; --danger: #dc2626; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #f1f5f9; color: #334155; }
-        .container { max-width: 800px; margin: auto; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        :root { --primary: #2563eb; --success: #16a34a; --danger: #dc2626; --dark: #1e293b; --bg: #f1f5f9; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); padding-bottom: 100px; }
+        .container { max-width: 800px; margin: auto; padding: 15px; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 15px; }
         
-        /* Buscador y Tabla */
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background: #f8fafc; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; }
-        td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
-        
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
-        .v12 { background: #dcfce7; color: #166534; }
-        .v24 { background: #fee2e2; color: #991b1b; }
-        .precio-venta { font-weight: bold; color: var(--success); font-size: 1.1em; }
+        /* Tabla de Ventas */
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 10px; border-bottom: 2px solid #eee; font-size: 0.8em; color: #666; }
+        td { padding: 12px 10px; border-bottom: 1px solid #eee; }
+        .p-name { font-weight: bold; display: block; }
+        .p-v { font-size: 0.7em; padding: 2px 5px; border-radius: 4px; background: #eee; }
+        .price { color: var(--success); font-weight: bold; }
 
-        /* Admin y Botones */
+        /* Carrito Flotante */
+        #cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--dark); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
+        
+        /* Modal de Boleta */
+        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 200; }
+        .ticket { background: white; width: 90%; max-width: 400px; padding: 20px; border-radius: 8px; color: #333; font-family: monospace; }
+        
+        .btn { border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-add { background: var(--primary); color: white; width: 100%; }
+        .btn-pay { background: var(--success); color: white; padding: 10px 20px; }
+        .btn-wa { background: #25D366; color: white; width: 100%; margin-top: 10px; font-size: 1.1em; }
+        
         .hidden { display: none; }
-        .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; }
-        .btn-edit { background: var(--secondary); margin-bottom: 5px; }
-        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); margin-top: 10px; }
+        input { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="card">
-        <h2 style="margin-top:0">⚡ Inventario de Venta</h2>
-        <input type="text" id="busqueda" placeholder="🔍 Buscar repuesto o voltaje..." onkeyup="renderizar()">
-        
-        <table>
+        <h2 style="margin:0; color: var(--primary)">⚡ Taller Electro-Ventas</h2>
+        <input type="text" id="busqueda" placeholder="🔍 Buscar repuesto..." onkeyup="renderizar()">
+        <table id="tabla-productos">
             <thead>
                 <tr>
                     <th>Producto</th>
-                    <th>Voltaje</th>
-                    <th>Stock</th>
                     <th>Precio</th>
+                    <th>Acción</th>
                 </tr>
             </thead>
-            <tbody id="tabla-cuerpo"></tbody>
+            <tbody id="lista-publica"></tbody>
         </table>
-        
-        <button class="btn btn-outline" onclick="toggleAdmin()">⚙️ Panel de Control</button>
+        <button class="btn" style="width:100%; margin-top:15px; color:var(--primary)" onclick="toggleAdmin()">⚙️ Inventario</button>
     </div>
+</div>
 
-    <div id="admin-panel" class="card hidden">
-        <h3 id="form-title">Añadir / Editar Producto</h3>
-        <input type="hidden" id="edit-index" value="-1">
-        <input type="text" id="nombre" placeholder="Nombre (ej: Alternador Mitsubishi)">
-        
-        <select id="voltaje">
-            <option value="12V">Sistema 12V</option>
-            <option value="24V">Sistema 24V</option>
-        </select>
+<div id="cart-bar" class="hidden">
+    <div>
+        <span id="cart-count">0</span> productos | 
+        <strong>Total: S/ <span id="cart-total">0.00</span></strong>
+    </div>
+    <button class="btn btn-pay" onclick="mostrarBoleta()">🛒 Finalizar</button>
+</div>
 
-        <div style="display: flex; gap: 10px;">
-            <input type="number" id="pCompra" placeholder="Costo Compra">
-            <input type="number" id="margen" placeholder="% Ganancia">
+<div id="modal-boleta" class="modal hidden">
+    <div class="ticket">
+        <h3 style="text-align:center; margin:0">BOLETA DE VENTA</h3>
+        <p style="text-align:center; font-size: 0.8em;">ELECTRO-TALLER AREQUIPA</p>
+        <hr>
+        <div id="ticket-items"></div>
+        <hr>
+        <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.2em">
+            <span>TOTAL:</span>
+            <span id="ticket-total"></span>
         </div>
-        
-        <input type="number" id="stock" placeholder="Cantidad disponible">
-        
-        <button class="btn" onclick="guardarProducto()">✅ Guardar Cambios</button>
-        <button class="btn btn-outline" style="border-color:var(--danger); color:var(--danger)" onclick="cancelarEdicion()">Cancelar</button>
+        <br>
+        <input type="number" id="cliente-wa" placeholder="Número de WhatsApp (9 dígitos)">
+        <button class="btn btn-wa" onclick="enviarWhatsApp()">Enviar a WhatsApp</button>
+        <button class="btn" style="width:100%; margin-top:10px;" onclick="cerrarBoleta()">Cancelar / Nueva Venta</button>
+    </div>
+</div>
+
+<div id="admin-panel" class="modal hidden" style="overflow-y: auto;">
+    <div class="card" style="width:90%; max-width:600px; margin: 20px auto;">
+        <h3>📦 Gestión de Inventario</h3>
+        <div id="filas-nuevas"></div>
+        <button class="btn btn-add" onclick="agregarFilaNueva()">+ Añadir Fila</button><br><br>
+        <button class="btn btn-pay" style="width:100%" onclick="guardarTodo()">Guardar Todo</button>
+        <button class="btn" style="width:100%; margin-top:10px" onclick="toggleAdmin()">Cerrar</button>
     </div>
 </div>
 
 <script>
     let inventario = JSON.parse(localStorage.getItem('taller_inv')) || [];
-    const CLAVE_ADMIN = "1234"; // Puedes cambiarla
-
-    function toggleAdmin() {
-        const pass = prompt("Introduce la clave de acceso:");
-        if (pass === CLAVE_ADMIN) {
-            document.getElementById('admin-panel').classList.toggle('hidden');
-        } else {
-            alert("Clave incorrecta");
-        }
-    }
-
-    function guardarProducto() {
-        const idx = document.getElementById('edit-index').value;
-        const prod = {
-            nombre: document.getElementById('nombre').value,
-            voltaje: document.getElementById('voltaje').value,
-            pCompra: parseFloat(document.getElementById('pCompra').value),
-            margen: parseFloat(document.getElementById('margen').value),
-            stock: parseInt(document.getElementById('stock').value),
-            pVenta: 0
-        };
-
-        prod.pVenta = prod.pCompra + (prod.pCompra * (prod.margen / 100));
-
-        if (idx === "-1") {
-            inventario.push(prod);
-        } else {
-            inventario[idx] = prod;
-        }
-
-        localStorage.setItem('taller_inv', JSON.stringify(inventario));
-        renderizar();
-        cancelarEdicion();
-    }
-
-    function editar(index) {
-        const p = inventario[index];
-        document.getElementById('edit-index').value = index;
-        document.getElementById('nombre').value = p.nombre;
-        document.getElementById('voltaje').value = p.voltaje;
-        document.getElementById('pCompra').value = p.pCompra;
-        document.getElementById('margen').value = p.margen;
-        document.getElementById('stock').value = p.stock;
-        document.getElementById('form-title').innerText = "Editando: " + p.nombre;
-        document.getElementById('admin-panel').classList.remove('hidden');
-        window.scrollTo(0, document.body.scrollHeight);
-    }
-
-    function cancelarEdicion() {
-        document.getElementById('edit-index').value = "-1";
-        document.getElementById('form-title').innerText = "Añadir / Editar Producto";
-        document.querySelectorAll('#admin-panel input').forEach(i => i.value = '');
-        document.getElementById('admin-panel').classList.add('hidden');
-    }
+    let carrito = [];
 
     function renderizar() {
         const filtro = document.getElementById('busqueda').value.toLowerCase();
-        const cuerpo = document.getElementById('tabla-cuerpo');
-        cuerpo.innerHTML = '';
+        const lista = document.getElementById('lista-publica');
+        lista.innerHTML = '';
 
         inventario.forEach((p, index) => {
-            if (p.nombre.toLowerCase().includes(filtro) || p.voltaje.toLowerCase().includes(filtro)) {
-                const badgeClass = p.voltaje === '12V' ? 'v12' : 'v24';
-                cuerpo.innerHTML += `
+            if (p.nombre.toLowerCase().includes(filtro)) {
+                lista.innerHTML += `
                     <tr>
                         <td>
-                            ${p.nombre}<br>
-                            <button class="btn btn-edit" style="width:auto; padding:4px 8px; font-size:10px;" onclick="editar(${index})">Editar</button>
+                            <span class="p-name">${p.nombre}</span>
+                            <span class="p-v">${p.voltaje}</span> 
+                            <small>Stock: ${p.stock}</small>
                         </td>
-                        <td><span class="badge ${badgeClass}">${p.voltaje}</span></td>
-                        <td>${p.stock}</td>
-                        <td class="precio-venta">S/ ${p.pVenta.toFixed(2)}</td>
+                        <td class="price">S/ ${p.pVenta.toFixed(2)}</td>
+                        <td><button class="btn btn-add" onclick="agregarAlCarrito(${index})">+</button></td>
                     </tr>
                 `;
             }
         });
+    }
+
+    function agregarAlCarrito(index) {
+        const p = inventario[index];
+        if(p.stock <= 0) return alert("Sin stock");
+        
+        carrito.push({ nombre: p.nombre, precio: p.pVenta, originalIndex: index });
+        p.stock -= 1; // Descuento visual previo
+        actualizarCarritoUI();
+    }
+
+    function actualizarCarritoUI() {
+        const bar = document.getElementById('cart-bar');
+        if(carrito.length > 0) {
+            bar.classList.remove('hidden');
+            const total = carrito.reduce((sum, item) => sum + item.precio, 0);
+            document.getElementById('cart-count').innerText = carrito.length;
+            document.getElementById('cart-total').innerText = total.toFixed(2);
+        } else {
+            bar.classList.add('hidden');
+        }
+        renderizar();
+    }
+
+    function mostrarBoleta() {
+        const itemsDiv = document.getElementById('ticket-items');
+        itemsDiv.innerHTML = '';
+        let total = 0;
+        
+        // Agrupar productos repetidos
+        const resumen = carrito.reduce((acc, curr) => {
+            acc[curr.nombre] = (acc[curr.nombre] || 0) + 1;
+            return acc;
+        }, {});
+
+        for (const [nombre, cant] of Object.entries(resumen)) {
+            const precioItem = carrito.find(c => c.nombre === nombre).precio;
+            const subtotal = precioItem * cant;
+            total += subtotal;
+            itemsDiv.innerHTML += `<div style="display:flex; justify-content:space-between">
+                <span>${cant}x ${nombre.substring(0,20)}</span>
+                <span>S/ ${subtotal.toFixed(2)}</span>
+            </div>`;
+        }
+
+        document.getElementById('ticket-total').innerText = `S/ ${total.toFixed(2)}`;
+        document.getElementById('modal-boleta').classList.remove('hidden');
+    }
+
+    function enviarWhatsApp() {
+        const num = document.getElementById('cliente-wa').value;
+        if(num.length < 9) return alert("Ingresa un número válido");
+
+        let texto = "*BOLETA ELECTRÓNICA - TALLER*%0A--------------------------%0A";
+        const resumen = carrito.reduce((acc, curr) => {
+            acc[curr.nombre] = (acc[curr.nombre] || 0) + 1;
+            return acc;
+        }, {});
+
+        for (const [nombre, cant] of Object.entries(resumen)) {
+            const precioItem = carrito.find(c => c.nombre === nombre).precio;
+            texto += `${cant} x ${nombre} = S/ ${(precioItem * cant).toFixed(2)}%0A`;
+        }
+        
+        const total = document.getElementById('ticket-total').innerText;
+        texto += `--------------------------%0A*TOTAL A PAGAR: ${total}*%0A%0A_¡Gracias por su preferencia!_`;
+
+        // Guardar permanentemente el stock descontado
+        localStorage.setItem('taller_inv', JSON.stringify(inventario));
+        
+        window.open(`https://wa.me/51${num}?text=${texto}`, '_blank');
+        cerrarBoleta();
+    }
+
+    function cerrarBoleta() {
+        carrito = [];
+        document.getElementById('modal-boleta').classList.add('hidden');
+        actualizarCarritoUI();
+    }
+
+    // --- FUNCIONES DE ADMIN ---
+    function toggleAdmin() {
+        const panel = document.getElementById('admin-panel');
+        if(panel.classList.contains('hidden')) {
+            const p = prompt("Clave:");
+            if(p === "1234") {
+                panel.classList.remove('hidden');
+                cargarAdminUI();
+            }
+        } else { panel.classList.add('hidden'); }
+    }
+
+    function cargarAdminUI() {
+        const div = document.getElementById('filas-nuevas');
+        div.innerHTML = '';
+        inventario.forEach((p, i) => {
+            div.innerHTML += `<div class="card">
+                <input type="text" value="${p.nombre}" onchange="inventario[${i}].nombre=this.value">
+                <div style="display:flex; gap:5px">
+                    <input type="number" value="${p.pCompra}" onchange="actualizarPrecio(${i}, 'compra', this.value)" placeholder="Costo">
+                    <input type="number" value="${p.margen}" onchange="actualizarPrecio(${i}, 'margen', this.value)" placeholder="%">
+                    <input type="number" value="${p.stock}" onchange="inventario[${i}].stock=parseInt(this.value)" placeholder="Stock">
+                </div>
+            </div>`;
+        });
+    }
+
+    function actualizarPrecio(i, tipo, valor) {
+        if(tipo === 'compra') inventario[i].pCompra = parseFloat(valor);
+        if(tipo === 'margen') inventario[i].margen = parseFloat(valor);
+        inventario[i].pVenta = inventario[i].pCompra * (1 + (inventario[i].margen/100));
+        cargarAdminUI();
+    }
+
+    function agregarFilaNueva() {
+        inventario.push({ nombre: 'Nuevo Producto', voltaje: '12V', pCompra: 0, margen: 30, stock: 0, pVenta: 0 });
+        cargarAdminUI();
+    }
+
+    function guardarTodo() {
+        localStorage.setItem('taller_inv', JSON.stringify(inventario));
+        renderizar();
+        alert("Guardado");
     }
 
     renderizar();
