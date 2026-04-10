@@ -39,7 +39,7 @@
 
 <div class="container">
     <div class="card">
-        <h2 style="margin:0; color: var(--primary)">⚡ Taller Electro-Ventas</h2>
+        <h2 style="margin:0; color: var(--primary)">⚡ SAN MARTÍN</h2>
         <input type="text" id="busqueda" placeholder="🔍 Buscar repuesto..." onkeyup="renderizar()">
         <table id="tabla-productos">
             <thead>
@@ -66,7 +66,7 @@
 <div id="modal-boleta" class="modal hidden">
     <div class="ticket">
         <h3 style="text-align:center; margin:0">BOLETA DE VENTA</h3>
-        <p style="text-align:center; font-size: 0.8em;">ELECTRO-TALLER AREQUIPA</p>
+        <p style="text-align:center; font-size: 0.8em;">Taller San MARTÍN</p>
         <hr>
         <div id="ticket-items"></div>
         <hr>
@@ -168,7 +168,7 @@
         const num = document.getElementById('cliente-wa').value;
         if(num.length < 9) return alert("Ingresa un número válido");
 
-        let texto = "*BOLETA ELECTRÓNICA - TALLER*%0A--------------------------%0A";
+        let texto = "*BOLETA ELECTRÓNICA - SAN MARTÍN*%0A--------------------------%0A";
         const resumen = carrito.reduce((acc, curr) => {
             acc[curr.nombre] = (acc[curr.nombre] || 0) + 1;
             return acc;
