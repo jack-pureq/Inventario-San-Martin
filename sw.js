@@ -1,4 +1,4 @@
-const CACHE_NAME = 'taller-v6'; // Cambiamos el nombre de v1 a v2
+const CACHE_NAME = 'taller-v7'; // Cambiamos el nombre de v1 a v2
 const ASSETS = [
   './',
   './index.html',
