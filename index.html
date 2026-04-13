@@ -2,301 +2,341 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Electro-Taller SAN MARTÍN</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>POS San Martín</title>
     <link rel="manifest" href="manifest.json">
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js');
-        }
-    </script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <style>
-        :root { 
-            --primary: #2563eb; 
-            --dark: #1e293b; 
-            --success: #16a34a; 
-            --danger: #dc2626; 
-            --bg: #f1f5f9;
+        :root {
+            --primary: #2563eb;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --gray: #f8fafc;
+            --text: #1e293b;
         }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: var(--dark); padding-bottom: 80px; }
-        .container { max-width: 800px; margin: auto; padding: 15px; }
-        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 15px; }
-        
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { text-align: left; padding: 10px; border-bottom: 2px solid #eee; font-size: 0.85em; color: #64748b; }
-        td { padding: 12px 10px; border-bottom: 1px solid #eee; }
-        
-        .p-name { font-weight: bold; display: block; color: #1e293b; }
-        .p-v { font-size: 0.75em; padding: 2px 6px; border-radius: 4px; background: #e2e8f0; font-weight: bold; }
-        .price { color: var(--success); font-weight: bold; font-size: 1.1em; }
-        .stock-info { font-size: 0.8em; color: #64748b; }
 
-        #cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--dark); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.2); }
-        
-        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 200; overflow-y: auto; }
-        .modal-content { background: white; width: 90%; max-width: 500px; padding: 20px; border-radius: 12px; max-height: 90vh; overflow-y: auto; }
-        
-        .ticket { font-family: monospace; color: #333; border: 1px dashed #ccc; padding: 15px; margin-bottom: 15px; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            margin: 0; background: #e2e8f0; color: var(--text);
+            display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+        }
 
-        .btn { border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; text-align: center; display: block; }
-        .btn-add { background: var(--primary); color: white; width: 100%; }
-        .btn-pay { background: var(--success); color: white; padding: 10px 20px; }
-        .btn-wa { background: #25D366; color: white; width: 100%; font-size: 1.1em; margin-top: 10px; }
-        .btn-secondary { background: #e2e8f0; color: #475569; width: 100%; margin-top: 10px; }
+        /* HEADER */
+        header { 
+            background: var(--dark); color: white; padding: 15px; 
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        /* VISTAS */
+        .view { flex: 1; overflow-y: auto; padding: 15px; display: none; }
+        .view.active { display: block; }
+
+        /* BUSCADOR ESTILO POS */
+        .search-box {
+            background: white; padding: 10px; border-radius: 12px;
+            display: flex; align-items: center; margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .search-box input {
+            border: none; outline: none; flex: 1; font-size: 16px; padding: 5px;
+        }
+
+        /* GRILLA DE PRODUCTOS */
+        .product-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+        }
+        .product-card {
+            background: white; border-radius: 12px; padding: 12px;
+            display: flex; flex-direction: column; justify-content: space-between;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #fff;
+        }
+        .product-card:active { transform: scale(0.95); border-color: var(--primary); }
+        .p-title { font-weight: bold; font-size: 0.9em; margin-bottom: 5px; height: 35px; overflow: hidden; }
+        .p-info { font-size: 0.75em; color: #64748b; margin-bottom: 10px; }
+        .p-price { color: var(--primary); font-weight: 800; font-size: 1.1em; }
+
+        /* NAVEGACIÓN INFERIOR */
+        nav {
+            background: white; display: flex; border-top: 1px solid #cbd5e1;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .nav-item {
+            flex: 1; padding: 12px; text-align: center; color: #64748b;
+            font-size: 0.7em; font-weight: bold; cursor: pointer;
+        }
+        .nav-item.active { color: var(--primary); }
+        .nav-item i { display: block; font-size: 1.5em; margin-bottom: 4px; }
+
+        /* CARRITO FLOTANTE */
+        .cart-summary {
+            background: var(--primary); color: white; margin: 10px;
+            padding: 15px; border-radius: 12px; display: flex;
+            justify-content: space-between; align-items: center;
+            cursor: pointer; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+        }
+
+        /* MODALES */
+        .modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            display: none; align-items: flex-end; z-index: 1000;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white; width: 100%; border-radius: 20px 20px 0 0;
+            padding: 20px; max-height: 85vh; overflow-y: auto;
+        }
+
+        /* TABLAS ADMIN */
+        .admin-table { width: 100%; border-collapse: collapse; }
+        .admin-table input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; }
         
-        .hidden { display: none; }
-        .flex-row { display: flex; gap: 8px; align-items: center; }
+        .btn {
+            border: none; border-radius: 8px; padding: 12px; font-weight: bold;
+            cursor: pointer; width: 100%; margin-top: 10px;
+        }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="card">
-        <h2 style="margin:0; color: var(--primary)">⚡ SAN MARTÍN - Ventas</h2>
-        <input type="text" id="busqueda" placeholder="🔍 Buscar repuesto..." onkeyup="renderizar()">
-        
-        <table id="tabla-productos">
+<header>
+    <div style="font-weight: 900; letter-spacing: -1px;">⚡ SAN MARTÍN</div>
+    <div id="reloj" style="font-size: 0.8em; opacity: 0.8;"></div>
+</header>
+
+<div id="view-pos" class="view active">
+    <div class="search-box">
+        <span>🔍</span>
+        <input type="text" id="p-search" placeholder="Buscar repuesto o voltaje..." onkeyup="renderPOS()">
+    </div>
+    
+    <div id="p-grid" class="product-grid">
+        </div>
+</div>
+
+<div id="view-inv" class="view">
+    <h3>📦 Control de Stock</h3>
+    <div style="background: white; border-radius: 12px; padding: 10px;">
+        <table class="admin-table" id="tabla-admin">
             <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Precio</th>
-                    <th>Acción</th>
+                <tr style="font-size: 0.8em; color: gray;">
+                    <th>Repuesto</th>
+                    <th>Costo</th>
+                    <th>Stock</th>
+                    <th></th>
                 </tr>
             </thead>
-            <tbody id="lista-publica"></tbody>
+            <tbody id="admin-body"></tbody>
         </table>
-        
-        <button class="btn btn-secondary" onclick="toggleAdmin()">⚙️ Panel de Inventario</button>
+        <button class="btn" onclick="nuevaFila()">+ Agregar Nuevo</button>
+        <button class="btn btn-success" onclick="guardarTodo()">Guardar Cambios</button>
     </div>
 </div>
 
-<div id="cart-bar" class="hidden">
-    <div>
-        <span id="cart-count">0</span> ítems | 
-        <strong>Total: S/ <span id="cart-total">0.00</span></strong>
+<div id="view-hist" class="view">
+    <h3>📊 Reporte de Ventas</h3>
+    <div id="stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+        <div style="background: white; padding: 15px; border-radius: 12px;">
+            <small>Total Ventas</small><br>
+            <strong id="stat-ventas" style="font-size: 1.2em;">S/ 0.00</strong>
+        </div>
+        <div style="background: #dcfce7; padding: 15px; border-radius: 12px;">
+            <small>Ganancia</small><br>
+            <strong id="stat-ganancia" style="color: var(--success); font-size: 1.2em;">S/ 0.00</strong>
+        </div>
     </div>
-    <button class="btn btn-pay" onclick="abrirBoleta()">Finalizar Venta</button>
+    <div id="historial-lista"></div>
+    <button class="btn btn-danger" onclick="borrarHistorial()">Limpiar Historial</button>
 </div>
 
-<div id="modal-boleta" class="modal hidden">
+<div id="cart-float" class="cart-summary hidden" onclick="abrirCheckout()">
+    <span>🛒 <span id="c-count">0</span> productos</span>
+    <span id="c-total" style="font-size: 1.2em; font-weight: 900;">S/ 0.00</span>
+</div>
+
+<nav>
+    <div class="nav-item active" onclick="showView('pos', this)">🏠<br>Venta</div>
+    <div class="nav-item" onclick="showView('inv', this)">📦<br>Stock</div>
+    <div class="nav-item" onclick="showView('hist', this)">📈<br>Reportes</div>
+</nav>
+
+<div id="modal-checkout" class="modal" onclick="if(event.target==this) this.classList.remove('active')">
     <div class="modal-content">
-        <div class="ticket">
-            <h3 style="text-align:center; margin:0">BOLETA DE VENTA</h3>
-            <p style="text-align:center; font-size: 0.8em; margin: 5px 0;">TALLER SAN MARTÍN - AREQUIPA</p>
-            <hr>
-            <div id="ticket-items"></div>
-            <hr>
-            <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.2em">
-                <span>TOTAL:</span>
-                <span id="ticket-total-display">S/ 0.00</span>
-            </div>
+        <h3 style="margin-top:0">Confirmar Venta</h3>
+        <div id="checkout-list" style="margin-bottom:15px; border-bottom: 1px solid #eee; padding-bottom:10px;"></div>
+        <div style="display:flex; justify-content:space-between; font-size:1.3em; font-weight:900;">
+            <span>TOTAL</span>
+            <span id="check-total">S/ 0.00</span>
         </div>
-        
-        <label>Enviar boleta al cliente:</label>
-        <input type="number" id="cliente-wa" placeholder="Número de WhatsApp (9 dígitos)">
-        <button class="btn btn-wa" onclick="enviarWhatsApp()">Enviar a WhatsApp 📱</button>
-        <button class="btn btn-secondary" onclick="cerrarVenta(true)">Nueva Venta (Limpiar)</button>
-        <button class="btn" style="width:100%; margin-top:10px; background:none; color:gray;" onclick="document.getElementById('modal-boleta').classList.add('hidden')">Seguir comprando</button>
-    </div>
-</div>
-
-<div id="admin-panel" class="modal hidden">
-    <div class="modal-content" style="max-width: 700px;">
-        <h3>📦 Gestión de Inventario</h3>
-        <div style="overflow-x: auto;">
-            <table style="min-width: 450px;">
-                <thead>
-                    <tr>
-                        <th>Producto / Voltaje</th>
-                        <th>Costo / Margen</th>
-                        <th>Stock</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="filas-admin"></tbody>
-            </table>
-        </div>
-        <div class="flex-row" style="margin-top:15px;">
-            <button class="btn btn-add" style="background:var(--dark)" onclick="agregarFilaNueva()">+ Fila</button>
-            <button class="btn btn-add" onclick="guardarTodoAdmin()">Guardar Cambios</button>
-        </div>
-        <button class="btn btn-secondary" onclick="toggleAdmin()">Cerrar Panel</button>
+        <input type="number" id="wa-num" placeholder="WhatsApp del cliente" style="width:100%; padding:15px; margin-top:20px; border:1px solid #ddd; border-radius:10px;">
+        <button class="btn btn-success" onclick="procesarVenta()">FINALIZAR Y ENVIAR 📱</button>
+        <button class="btn btn-danger" onclick="limpiarCarrito()">CANCELAR VENTA</button>
     </div>
 </div>
 
 <script>
-    let inventario = JSON.parse(localStorage.getItem('taller_inv')) || [];
-    let carrito = JSON.parse(localStorage.getItem('taller_carrito')) || [];
-    const CLAVE_ADMIN = "1234";
+    // DATOS
+    let db = JSON.parse(localStorage.getItem('pos_sanmartin')) || { inv: [], hist: [] };
+    let cart = JSON.parse(localStorage.getItem('pos_cart')) || [];
 
-    function renderizar() {
-        const filtro = document.getElementById('busqueda').value.toLowerCase();
-        const lista = document.getElementById('lista-publica');
-        lista.innerHTML = '';
+    // RELOJ
+    setInterval(() => {
+        document.getElementById('reloj').innerText = new Date().toLocaleTimeString();
+    }, 1000);
 
-        inventario.forEach((p, index) => {
-            if (p.nombre.toLowerCase().includes(filtro)) {
-                lista.innerHTML += `
-                    <tr>
-                        <td>
-                            <span class="p-name">${p.nombre}</span>
-                            <div class="flex-row">
-                                <span class="p-v">${p.voltaje}</span>
-                                <span class="stock-info">Stock: ${p.stock}</span>
-                            </div>
-                        </td>
-                        <td class="price">S/ ${p.pVenta.toFixed(2)}</td>
-                        <td><button class="btn btn-add" onclick="agregarAlCarrito(${index})">+</button></td>
-                    </tr>
+    // CAMBIO DE VISTA
+    function showView(viewId, el) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('view-' + viewId).classList.add('active');
+        el.classList.add('active');
+        if(viewId === 'inv') renderAdmin();
+        if(viewId === 'hist') renderHist();
+    }
+
+    // POS RENDER
+    function renderPOS() {
+        const grid = document.getElementById('p-grid');
+        const search = document.getElementById('p-search').value.toLowerCase();
+        grid.innerHTML = '';
+        
+        db.inv.forEach((p, i) => {
+            if(p.nombre.toLowerCase().includes(search) || p.voltaje.includes(search)) {
+                grid.innerHTML += `
+                    <div class="product-card" onclick="addCart(${i})">
+                        <div>
+                            <div class="p-title">${p.nombre}</div>
+                            <div class="p-info">${p.voltaje} | Stock: ${p.stock}</div>
+                        </div>
+                        <div class="p-price">S/ ${parseFloat(p.venta).toFixed(2)}</div>
+                    </div>
                 `;
             }
         });
-        actualizarCarritoUI();
+        updateCartUI();
     }
 
-    function agregarAlCarrito(index) {
-        if (inventario[index].stock <= 0) return alert("Sin stock disponible");
-        
-        inventario[index].stock -= 1;
-        carrito.push({ 
-            nombre: inventario[index].nombre, 
-            precio: inventario[index].pVenta,
-            id: index 
-        });
-        
-        guardarEstado();
-        renderizar();
+    // CARRITO
+    function addCart(i) {
+        if(db.inv[i].stock <= 0) return alert("Sin stock");
+        db.inv[i].stock--;
+        cart.push({...db.inv[i], originalIdx: i});
+        save();
+        renderPOS();
     }
 
-    function actualizarCarritoUI() {
-        const bar = document.getElementById('cart-bar');
-        if (carrito.length > 0) {
-            bar.classList.remove('hidden');
-            const total = carrito.reduce((sum, item) => sum + item.precio, 0);
-            document.getElementById('cart-count').innerText = carrito.length;
-            document.getElementById('cart-total').innerText = total.toFixed(2);
+    function updateCartUI() {
+        const float = document.getElementById('cart-float');
+        if(cart.length > 0) {
+            float.classList.remove('hidden');
+            document.getElementById('c-count').innerText = cart.length;
+            const total = cart.reduce((s, p) => s + parseFloat(p.venta), 0);
+            document.getElementById('c-total').innerText = 'S/ ' + total.toFixed(2);
         } else {
-            bar.classList.add('hidden');
+            float.classList.add('hidden');
         }
     }
 
-    function abrirBoleta() {
-        const itemsDiv = document.getElementById('ticket-items');
-        itemsDiv.innerHTML = '';
+    function abrirCheckout() {
+        const list = document.getElementById('checkout-list');
+        list.innerHTML = '';
         let total = 0;
-        
-        const resumen = carrito.reduce((acc, curr) => {
-            acc[curr.nombre] = acc[curr.nombre] || { cant: 0, precio: curr.precio };
-            acc[curr.nombre].cant += 1;
-            return acc;
-        }, {});
-
-        for (const [nombre, data] of Object.entries(resumen)) {
-            const sub = data.cant * data.precio;
-            total += sub;
-            itemsDiv.innerHTML += `
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                    <span>${data.cant}x ${nombre.substring(0,20)}</span>
-                    <span>S/ ${sub.toFixed(2)}</span>
-                </div>`;
-        }
-        document.getElementById('ticket-total-display').innerText = `S/ ${total.toFixed(2)}`;
-        document.getElementById('modal-boleta').classList.remove('hidden');
+        cart.forEach(p => {
+            total += parseFloat(p.venta);
+            list.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span>${p.nombre}</span><span>S/ ${parseFloat(p.venta).toFixed(2)}</span>
+            </div>`;
+        });
+        document.getElementById('check-total').innerText = 'S/ ' + total.toFixed(2);
+        document.getElementById('modal-checkout').classList.add('active');
     }
 
-    function enviarWhatsApp() {
-        const num = document.getElementById('cliente-wa').value;
-        if (num.length < 9) return alert("Número de WhatsApp inválido");
+    function procesarVenta() {
+        const num = document.getElementById('wa-num').value;
+        if(num.length < 9) return alert("WhatsApp inválido");
 
-        let msg = "*BOLETA - TALLER SAN MARTÍN*%0A--------------------------%0A";
-        const resumen = carrito.reduce((acc, curr) => {
-            acc[curr.nombre] = acc[curr.nombre] || { cant: 0, precio: curr.precio };
-            acc[curr.nombre].cant += 1;
-            return acc;
-        }, {});
+        const totalVenta = cart.reduce((s, p) => s + parseFloat(p.venta), 0);
+        const totalCosto = cart.reduce((s, p) => s + parseFloat(p.costo), 0);
 
-        for (const [nombre, data] of Object.entries(resumen)) {
-            msg += `${data.cant} x ${nombre} = S/ ${(data.cant * data.precio).toFixed(2)}%0A`;
-        }
-        msg += `--------------------------%0A*TOTAL: ${document.getElementById('ticket-total-display').innerText}*%0A%0A_Gracias por su compra en Arequipa._`;
+        const nuevaVenta = {
+            fecha: new Date().toLocaleString(),
+            items: cart.map(p => p.nombre).join(', '),
+            monto: totalVenta,
+            ganancia: totalVenta - totalCosto
+        };
+
+        db.hist.push(nuevaVenta);
         
+        // Enlace WhatsApp
+        let msg = `*TALLER SAN MARTÍN*%0A------------------%0A${nuevaVenta.items}%0A------------------%0A*TOTAL: S/ ${totalVenta.toFixed(2)}*`;
         window.open(`https://wa.me/51${num}?text=${msg}`, '_blank');
-        cerrarVenta(true);
+
+        limpiarCarrito();
+        document.getElementById('modal-checkout').classList.remove('active');
     }
 
-    function cerrarVenta(limpiar) {
-        if(limpiar) {
-            carrito = [];
-            localStorage.removeItem('taller_carrito');
-        }
-        document.getElementById('modal-boleta').classList.add('hidden');
-        renderizar();
+    function limpiarCarrito() {
+        cart = [];
+        localStorage.removeItem('pos_cart');
+        save();
+        renderPOS();
+        document.getElementById('modal-checkout').classList.remove('active');
     }
 
-    function guardarEstado() {
-        localStorage.setItem('taller_inv', JSON.stringify(inventario));
-        localStorage.setItem('taller_carrito', JSON.stringify(carrito));
-    }
-
-    function toggleAdmin() {
-        const modal = document.getElementById('admin-panel');
-        if (modal.classList.contains('hidden')) {
-            const p = prompt("Clave de acceso:");
-            if (p === CLAVE_ADMIN) {
-                modal.classList.remove('hidden');
-                cargarAdminUI();
-            }
-        } else { modal.classList.add('hidden'); }
-    }
-
-    function cargarAdminUI() {
-        const tbody = document.getElementById('filas-admin');
-        tbody.innerHTML = '';
-        inventario.forEach((p, i) => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>
-                    <input type="text" value="${p.nombre}" onchange="inventario[${i}].nombre=this.value">
-                    <select onchange="inventario[${i}].voltaje=this.value">
-                        <option value="12V" ${p.voltaje=='12V'?'selected':''}>12V</option>
-                        <option value="24V" ${p.voltaje=='24V'?'selected':''}>24V</option>
-                    </select>
-                </td>
-                <td>
-                    <input type="number" value="${p.pCompra}" onchange="actualizarCosto(${i}, this.value)" placeholder="Costo">
-                    <input type="number" value="${p.margen}" onchange="actualizarMargen(${i}, this.value)" placeholder="Gain%">
-                </td>
-                <td><input type="number" value="${p.stock}" onchange="inventario[${i}].stock=parseInt(this.value)"></td>
-                <td><button onclick="inventario.splice(${i},1); cargarAdminUI()" style="color:red; border:none; background:none;">X</button></td>
+    // ADMIN
+    function renderAdmin() {
+        const body = document.getElementById('admin-body');
+        body.innerHTML = '';
+        db.inv.forEach((p, i) => {
+            body.innerHTML += `
+                <tr>
+                    <td><input type="text" value="${p.nombre}" onchange="db.inv[${i}].nombre=this.value"></td>
+                    <td><input type="number" value="${p.costo}" onchange="db.inv[${i}].costo=this.value; db.inv[${i}].venta=this.value*1.3"></td>
+                    <td><input type="number" value="${p.stock}" onchange="db.inv[${i}].stock=this.value"></td>
+                    <td><button onclick="db.inv.splice(${i},1); renderAdmin()">❌</button></td>
+                </tr>
             `;
-            tbody.appendChild(tr);
         });
     }
 
-    function agregarFilaNueva() {
-        inventario.push({ nombre: '', voltaje: '12V', pCompra: 0, margen: 30, stock: 0, pVenta: 0 });
-        cargarAdminUI();
+    function nuevaFila() {
+        db.inv.push({nombre: '', voltaje: '12V', costo: 0, venta: 0, stock: 0});
+        renderAdmin();
     }
 
-    function actualizarCosto(i, val) {
-        inventario[i].pCompra = parseFloat(val);
-        inventario[i].pVenta = inventario[i].pCompra * (1 + (inventario[i].margen / 100));
+    // HISTORIAL
+    function renderHist() {
+        const list = document.getElementById('historial-lista');
+        list.innerHTML = '';
+        let tV = 0, tG = 0;
+        db.hist.slice().reverse().forEach(v => {
+            tV += v.monto; tG += v.ganancia;
+            list.innerHTML += `
+                <div style="background:white; padding:10px; border-radius:10px; margin-bottom:8px; font-size:0.8em">
+                    <b>${v.fecha}</b><br>${v.items}<br>
+                    <span style="color:var(--success)">S/ ${v.monto.toFixed(2)}</span>
+                </div>
+            `;
+        });
+        document.getElementById('stat-ventas').innerText = 'S/ ' + tV.toFixed(2);
+        document.getElementById('stat-ganancia').innerText = 'S/ ' + tG.toFixed(2);
     }
 
-    function actualizarMargen(i, val) {
-        inventario[i].margen = parseFloat(val);
-        inventario[i].pVenta = inventario[i].pCompra * (1 + (inventario[i].margen / 100));
-    }
+    function borrarHistorial() { if(confirm("¿Borrar todo?")) { db.hist = []; save(); renderHist(); } }
 
-    function guardarTodoAdmin() {
-        localStorage.setItem('taller_inv', JSON.stringify(inventario));
-        renderizar();
-        alert("¡Inventario actualizado!");
-        toggleAdmin();
+    function save() { 
+        localStorage.setItem('pos_sanmartin', JSON.stringify(db)); 
+        localStorage.setItem('pos_cart', JSON.stringify(cart));
     }
+    
+    function guardarTodo() { save(); alert("Guardado en el sistema"); }
 
-    renderizar();
+    renderPOS();
 </script>
 </body>
 </html>
